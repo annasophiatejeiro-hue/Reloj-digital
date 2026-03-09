@@ -13,6 +13,20 @@
         :root {
             --bg-dark: #212529;
             --text-light: #ced4da;
+            --btn-bg: rgba(255, 255, 255, 0.05);
+            --btn-hover: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Estilos Modo Claro */
+        body.light-mode {
+            --bg-dark: #f8f9fa;
+            --text-light: #212529;
+            --btn-bg: rgba(0, 0, 0, 0.05);
+            --btn-hover: rgba(0, 0, 0, 0.1);
+        }
+
+        body.light-mode .location img {
+            filter: none; /* Opcional: ajustar color del icono en modo claro */
         }
 
         body {
@@ -25,7 +39,7 @@
             justify-content: center;
             margin: 0;
             overflow: hidden;
-            transition: cursor 0.3s ease;
+            transition: background-color 0.3s ease, color 0.3s ease, cursor 0.3s ease;
         }
 
         .hide-cursor {
@@ -74,7 +88,7 @@
         .control-btn {
             position: absolute;
             bottom: 30px;
-            background: rgba(255, 255, 255, 0.05);
+            background: var(--btn-bg);
             border: none;
             border-radius: 4px;
             padding: 8px;
@@ -86,7 +100,7 @@
             justify-content: center;
         }
 
-        .control-btn:hover { background: rgba(255, 255, 255, 0.15); }
+        .control-btn:hover { background: var(--btn-hover); }
         .control-btn svg { fill: var(--text-light); width: 28px; height: 28px; }
 
         #play-btn { left: 30px; }
@@ -94,11 +108,24 @@
         #prev-btn { left: 130px; }
         #next-btn { left: 180px; }
         #fs-button { right: 30px; }
+
+        /* Estilo para el botón de tema (Superior Derecha) */
+        #theme-btn {
+            top: 30px;
+            right: 30px;
+            bottom: auto;
+        }
     </style>
 </head>
 <body>
 
     <audio id="radio-stream"></audio>
+
+    <button class="control-btn" id="theme-btn" title="Cambiar modo">
+        <svg viewBox="0 0 24 24" id="theme-icon">
+            <path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41l-1.06-1.06zm1.06-12.37c-.39-.39-1.02-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.38.39-1.02 0-1.41zM7.05 18.01c-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"/>
+        </svg>
+    </button>
 
     <button class="control-btn" id="play-btn"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
     <button class="control-btn" id="stop-btn" title="Detener"><svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg></button>
@@ -129,12 +156,13 @@
         const stopBtn = document.getElementById('stop-btn');
         const prevBtn = document.getElementById('prev-btn');
         const nextBtn = document.getElementById('next-btn');
+        const themeBtn = document.getElementById('theme-btn');
         const iconFs = document.getElementById('icon-fs');
         const audio = document.getElementById('radio-stream');
         
         let cursorTimer;
         let currentRadioIndex = 0;
-        let userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone; // Huso horario por defecto del sistema
+        let userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
         const playlist = [
             { name: "Radio Aspen 102.3 (Buenos Aires)", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/ASPEN.mp3" },
@@ -154,14 +182,18 @@
             { name: "Radio Vale 97.5 (Buenos Aires)", url: "http://vale.stweb.tv:1935/vale/live/playlist.m3u8" }
         ];
 
-        // --- DETECCIÓN AUTOMÁTICA DE UBICACIÓN Y HUSO HORARIO ---
+        // --- LÓGICA DE TEMA CLARO/OSCURO ---
+        themeBtn.addEventListener('click', () => {
+            document.body.classList.toggle('light-mode');
+        });
+
         async function autoDetectLocation() {
             try {
                 const response = await fetch('https://ipapi.co/json/');
                 const data = await response.json();
                 if (data.city) {
                     locationEl.textContent = `${data.city}, ${data.region}, ${data.country_name}`;
-                    userTimeZone = data.timezone; // Ajusta el reloj al huso horario de la IP detectada
+                    userTimeZone = data.timezone;
                 }
             } catch (error) {
                 locationEl.textContent = "Ubicación basada en sistema";
@@ -170,7 +202,6 @@
         }
         autoDetectLocation();
 
-        // --- RELOJ Y FECHA DINÁMICOS ---
         function updateClock() {
             const now = new Date();
             const timeOptions = { timeZone: userTimeZone, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
@@ -183,7 +214,6 @@
         setInterval(updateClock, 1000);
         updateClock();
 
-        // --- LÓGICA DE RADIOS ---
         function loadRadio(index) {
             currentRadioIndex = (index + playlist.length) % playlist.length;
             audio.src = playlist[currentRadioIndex].url;
@@ -206,7 +236,6 @@
 
         loadRadio(0);
 
-        // --- GESTIÓN DE INTERFAZ (OCULTAR CONTROLES) ---
         function hideControls() {
             if (document.fullscreenElement) {
                 document.body.classList.add('hide-cursor');
