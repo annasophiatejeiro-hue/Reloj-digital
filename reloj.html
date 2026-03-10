@@ -73,6 +73,16 @@
             margin-top: 1rem; 
         }
 
+        /* Estilo para el nombre de la radio incorporado */
+        .now-playing {
+            font-size: clamp(0.7rem, 2vw, 1.1rem);
+            font-weight: 300;
+            opacity: 0.6;
+            margin-top: 1.5rem;
+            letter-spacing: 0.5px;
+            transition: opacity 0.5s ease;
+        }
+
         .location img {
             height: 1em; 
             width: auto;
@@ -101,7 +111,6 @@
         .control-btn:hover { background: var(--btn-hover); }
         .control-btn svg { fill: var(--text-light); width: 28px; height: 28px; }
 
-        /* Botones reubicados (Stop eliminado, Play a la izquierda) */
         #play-btn { left: 30px; }
         #prev-btn { left: 80px; }
         #next-btn { left: 130px; }
@@ -167,6 +176,7 @@
             <img src="https://cdn-icons-png.flaticon.com/512/684/684908.png" alt="Icono">
             <span id="user-location">Buscando ubicación...</span>
         </div>
+        <div class="now-playing" id="radio-name">Reproduciendo: Radio Aspen 102.3</div>
     </div>
 
     <button class="control-btn" id="fs-button" title="Pantalla completa">
@@ -179,6 +189,7 @@
         const clockEl = document.getElementById('digital-clock');
         const dateEl = document.getElementById('current-date');
         const locationEl = document.getElementById('user-location');
+        const radioNameEl = document.getElementById('radio-name'); // Referencia nueva
         const fsButton = document.getElementById('fs-button');
         const playBtn = document.getElementById('play-btn');
         const playIcon = document.getElementById('play-icon');
@@ -241,6 +252,7 @@
         function loadRadio(index) {
             currentRadioIndex = (index + playlist.length) % playlist.length;
             audio.src = playlist[currentRadioIndex].url;
+            radioNameEl.textContent = "Reproduciendo: " + playlist[currentRadioIndex].name; // Actualizar texto
             updateTooltips();
         }
 
@@ -254,15 +266,14 @@
             else playBtn.title = "Detener: " + current.name;
         }
 
-        // Lógica de alternancia Play/Stop
         function togglePlay() {
             if (audio.paused) {
                 if (!audio.src) loadRadio(currentRadioIndex);
                 audio.play();
-                playIcon.innerHTML = '<path d="M6 6h12v12H6z"/>'; // Icono Stop
+                playIcon.innerHTML = '<path d="M6 6h12v12H6z"/>';
             } else {
                 audio.pause();
-                playIcon.innerHTML = '<path d="M8 5v14l11-7z"/>'; // Icono Play
+                playIcon.innerHTML = '<path d="M8 5v14l11-7z"/>';
             }
             updateTooltips();
         }
@@ -281,7 +292,6 @@
             playIcon.innerHTML = '<path d="M6 6h12v12H6z"/>';
         });
 
-        // Volumen
         volumeSlider.addEventListener('input', (e) => {
             audio.volume = e.target.value;
             updateVolumeIcon(audio.volume);
@@ -306,12 +316,14 @@
             if (document.fullscreenElement) {
                 document.body.classList.add('hide-cursor');
                 document.querySelectorAll('.control-btn, .volume-container').forEach(b => b.style.opacity = "0");
+                radioNameEl.style.opacity = "0"; // Ocultar también el nombre en pantalla completa
             }
         }
 
         function showControls() {
             document.body.classList.remove('hide-cursor');
             document.querySelectorAll('.control-btn, .volume-container').forEach(b => b.style.opacity = "1");
+            radioNameEl.style.opacity = "0.6"; // Restaurar opacidad suave
             clearTimeout(cursorTimer);
             if (document.fullscreenElement) cursorTimer = setTimeout(hideControls, 3000);
         }
