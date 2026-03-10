@@ -82,7 +82,7 @@
             /* Se aumentó el tamaño de fuente para igualar visualmente a los botones */
             font-size: clamp(1rem, 2.5vw, 1.5rem);
             font-weight: 400;
-            opacity: 0.6;
+            opacity: 0; /* INICIA INVISIBLE */
             letter-spacing: 0.5px;
             transition: opacity 0.5s ease;
             white-space: nowrap;
@@ -278,9 +278,11 @@
                 if (!audio.src) loadRadio(currentRadioIndex);
                 audio.play();
                 playIcon.innerHTML = '<path d="M6 6h12v12H6z"/>';
+                radioNameEl.style.opacity = "0.6"; // SE HACE VISIBLE AL DAR PLAY
             } else {
                 audio.pause();
                 playIcon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+                radioNameEl.style.opacity = "0"; // SE OCULTA AL PAUSAR
             }
             updateTooltips();
         }
@@ -291,12 +293,14 @@
             loadRadio(currentRadioIndex - 1); 
             audio.play(); 
             playIcon.innerHTML = '<path d="M6 6h12v12H6z"/>';
+            radioNameEl.style.opacity = "0.6";
         });
 
         nextBtn.addEventListener('click', () => { 
             loadRadio(currentRadioIndex + 1); 
             audio.play(); 
             playIcon.innerHTML = '<path d="M6 6h12v12H6z"/>';
+            radioNameEl.style.opacity = "0.6";
         });
 
         volumeSlider.addEventListener('input', (e) => {
@@ -317,7 +321,7 @@
             else volIcon.innerHTML = '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>';
         }
 
-        loadRadio(0);
+        // Se quitó loadRadio(0) de aquí para que no aparezca el nombre al cargar
 
         function hideControls() {
             if (document.fullscreenElement) {
@@ -330,7 +334,7 @@
         function showControls() {
             document.body.classList.remove('hide-cursor');
             document.querySelectorAll('.control-btn, .volume-container').forEach(b => b.style.opacity = "1");
-            radioNameEl.style.opacity = "0.6"; 
+            if (!audio.paused) radioNameEl.style.opacity = "0.6"; // Solo mostrar si no está pausado
             clearTimeout(cursorTimer);
             if (document.fullscreenElement) cursorTimer = setTimeout(hideControls, 3000);
         }
