@@ -17,7 +17,6 @@
             --btn-hover: rgba(255, 255, 255, 0.15);
         }
 
-        /* Estilos Modo Claro */
         body.light-mode {
             --bg-dark: #f8f9fa;
             --text-light: #212529;
@@ -25,9 +24,7 @@
             --btn-hover: rgba(0, 0, 0, 0.1);
         }
 
-        body.light-mode .location img {
-            filter: none; /* Opcional: ajustar color del icono en modo claro */
-        }
+        body.light-mode .location img { filter: none; }
 
         body {
             background-color: var(--bg-dark);
@@ -42,9 +39,7 @@
             transition: background-color 0.3s ease, color 0.3s ease, cursor 0.3s ease;
         }
 
-        .hide-cursor {
-            cursor: none !important;
-        }
+        .hide-cursor { cursor: none !important; }
 
         #clock-container {
             text-align: center;
@@ -85,16 +80,19 @@
             vertical-align: middle;
         }
 
-        .control-btn {
+        .control-btn, .volume-container {
             position: absolute;
             bottom: 30px;
+            z-index: 100;
+            transition: all 0.3s ease, opacity 0.5s ease;
+        }
+
+        .control-btn {
             background: var(--btn-bg);
             border: none;
             border-radius: 4px;
             padding: 8px;
             cursor: pointer;
-            transition: all 0.3s ease, opacity 0.5s ease;
-            z-index: 100;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -103,18 +101,39 @@
         .control-btn:hover { background: var(--btn-hover); }
         .control-btn svg { fill: var(--text-light); width: 28px; height: 28px; }
 
+        /* Botones reubicados (Stop eliminado, Play a la izquierda) */
         #play-btn { left: 30px; }
-        #stop-btn { left: 80px; } 
-        #prev-btn { left: 130px; }
-        #next-btn { left: 180px; }
-        #fs-button { right: 30px; }
-
-        /* Estilo para el botón de tema (Superior Derecha) */
-        #theme-btn {
-            top: 30px;
-            right: 30px;
-            bottom: auto;
+        #prev-btn { left: 80px; }
+        #next-btn { left: 130px; }
+        
+        .volume-container {
+            left: 180px;
+            display: flex;
+            align-items: center;
+            background: var(--btn-bg);
+            padding: 0 8px;
+            border-radius: 4px;
+            height: 44px;
         }
+
+        .volume-container:hover { background: var(--btn-hover); }
+
+        #volume-slider {
+            width: 0;
+            opacity: 0;
+            transition: width 0.3s ease, opacity 0.3s ease;
+            cursor: pointer;
+            margin-left: 5px;
+            accent-color: var(--text-light);
+        }
+
+        .volume-container:hover #volume-slider {
+            width: 80px;
+            opacity: 1;
+        }
+
+        #fs-button { right: 30px; }
+        #theme-btn { top: 30px; right: 30px; bottom: auto; }
     </style>
 </head>
 <body>
@@ -127,10 +146,19 @@
         </svg>
     </button>
 
-    <button class="control-btn" id="play-btn"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
-    <button class="control-btn" id="stop-btn" title="Detener"><svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg></button>
+    <button class="control-btn" id="play-btn" title="Reproducir">
+        <svg id="play-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+    
     <button class="control-btn" id="prev-btn"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
     <button class="control-btn" id="next-btn"><svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6z"/></svg></button>
+
+    <div class="volume-container" id="vol-cont">
+        <button class="control-btn" id="mute-btn" style="position:relative; bottom:0; left:0; background:none; padding:0;">
+            <svg viewBox="0 0 24 24" id="vol-icon"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+        </button>
+        <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="1">
+    </div>
 
     <div id="clock-container">
         <div class="date" id="current-date">Detectando fecha...</div>
@@ -153,39 +181,39 @@
         const locationEl = document.getElementById('user-location');
         const fsButton = document.getElementById('fs-button');
         const playBtn = document.getElementById('play-btn');
-        const stopBtn = document.getElementById('stop-btn');
+        const playIcon = document.getElementById('play-icon');
         const prevBtn = document.getElementById('prev-btn');
         const nextBtn = document.getElementById('next-btn');
         const themeBtn = document.getElementById('theme-btn');
         const iconFs = document.getElementById('icon-fs');
         const audio = document.getElementById('radio-stream');
         
+        const volumeSlider = document.getElementById('volume-slider');
+        const muteBtn = document.getElementById('mute-btn');
+        const volIcon = document.getElementById('vol-icon');
+
         let cursorTimer;
         let currentRadioIndex = 0;
         let userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        let lastVolume = 1;
 
         const playlist = [
-            { name: "Radio Aspen 102.3 (Buenos Aires)", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/ASPEN.mp3" },
-            { name: "Radio Blue 100.7 (Buenos Aires)", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/BLUE_FM_100_7AAC.aac" },
-            { name: "Radio Cadena Heat 91.9 (Córdoba)", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/CADENAHEAT_SC" },
-            { name: "Radio Disney 94.3 (Buenos Aires)", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/DISNEY_ARG_BA_ADP.m3u8?dist=web-radiodisney" },
-            { name: "Radio La 100 99.9 (Buenos Aires)", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/FM999_56AAC.aac" },
-            { name: "Radio LN+ música 104.9 (Buenos Aires)", url: "https://stream.radio.co/s2ed3bec0a/listen" },
-            { name: "Radio Los 40 105.5 (Buenos Aires)", url: "https://edge01.radiohdvivo.com/los40" },
-            { name: "Radio Nacional LT12 Gral. Madariaga 840 AM (Paso de los Libres)", url: "http://sa.mp3.icecast.magma.edge-access.net:7200/sc_rad43" },
-            { name: "Radio Mega 98.3 (Buenos Aires)", url: "https://mega.stweb.tv/mega983/live/chunks.m3u8" },
-            { name: "Radio Metro 95.1 (Buenos Aires)", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/METROAAC.aac" },
-            { name: "Radio Pop 101.5 (Buenos Aires)", url: "https://popradio.stweb.tv/popradio/live/playlist.m3u8" },
-            { name: "Radio Rock & Pop 95.9 (Buenos Aires)", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/ROCKANDPOPAAC.aac" },
-            { name: "Radio Sónica 102.3 (Paso de los Libres)", url: "https://01.solumedia.com.ar:8796/stream" },
-            { name: "Radio Urbana Play 104.3 (Buenos Aires)", url: "http://ipanel.instream.audio:7102/stream" },
-            { name: "Radio Vale 97.5 (Buenos Aires)", url: "http://vale.stweb.tv:1935/vale/live/playlist.m3u8" }
+            { name: "Radio Aspen 102.3", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/ASPEN.mp3" },
+            { name: "Radio Blue 100.7", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/BLUE_FM_100_7AAC.aac" },
+            { name: "Radio Cadena Heat 91.9", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/CADENAHEAT_SC" },
+            { name: "Radio Disney 94.3", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/DISNEY_ARG_BA_ADP.m3u8?dist=web-radiodisney" },
+            { name: "Radio La 100 99.9", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/FM999_56AAC.aac" },
+            { name: "Radio LN+ música 104.9", url: "https://stream.radio.co/s2ed3bec0a/listen" },
+            { name: "Radio Los 40 105.5", url: "https://edge01.radiohdvivo.com/los40" },
+            { name: "Radio Mega 98.3", url: "https://mega.stweb.tv/mega983/live/chunks.m3u8" },
+            { name: "Radio Metro 95.1", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/METROAAC.aac" },
+            { name: "Radio Pop 101.5", url: "https://popradio.stweb.tv/popradio/live/playlist.m3u8" },
+            { name: "Radio Rock & Pop 95.9", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/ROCKANDPOPAAC.aac" },
+            { name: "Radio Sónica 102.3", url: "https://01.solumedia.com.ar:8796/stream" },
+            { name: "Radio Urbana Play 104.3", url: "http://ipanel.instream.audio:7102/stream" }
         ];
 
-        // --- LÓGICA DE TEMA CLARO/OSCURO ---
-        themeBtn.addEventListener('click', () => {
-            document.body.classList.toggle('light-mode');
-        });
+        themeBtn.addEventListener('click', () => { document.body.classList.toggle('light-mode'); });
 
         async function autoDetectLocation() {
             try {
@@ -195,10 +223,7 @@
                     locationEl.textContent = `${data.city}, ${data.region}, ${data.country_name}`;
                     userTimeZone = data.timezone;
                 }
-            } catch (error) {
-                locationEl.textContent = "Ubicación basada en sistema";
-                console.error("Error al detectar ubicación, usando configuración local.");
-            }
+            } catch (error) { locationEl.textContent = "Ubicación basada en sistema"; }
         }
         autoDetectLocation();
 
@@ -206,7 +231,6 @@
             const now = new Date();
             const timeOptions = { timeZone: userTimeZone, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
             const dateOptions = { timeZone: userTimeZone, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
-            
             clockEl.textContent = new Intl.DateTimeFormat('es-AR', timeOptions).format(now);
             let dateString = new Intl.DateTimeFormat('es-AR', dateOptions).format(now);
             dateEl.textContent = dateString.charAt(0).toUpperCase() + dateString.slice(1);
@@ -224,28 +248,70 @@
             const current = playlist[currentRadioIndex];
             const prev = playlist[(currentRadioIndex - 1 + playlist.length) % playlist.length];
             const next = playlist[(currentRadioIndex + 1) % playlist.length];
-            playBtn.title = "Reproduciendo: " + current.name;
             prevBtn.title = "Anterior: " + prev.name;
             nextBtn.title = "Siguiente: " + next.name;
+            if (audio.paused) playBtn.title = "Reproducir: " + current.name;
+            else playBtn.title = "Detener: " + current.name;
         }
 
-        playBtn.addEventListener('click', () => { if (!audio.src) loadRadio(currentRadioIndex); audio.play(); });
-        stopBtn.addEventListener('click', () => { audio.pause(); });
-        prevBtn.addEventListener('click', () => { loadRadio(currentRadioIndex - 1); audio.play(); });
-        nextBtn.addEventListener('click', () => { loadRadio(currentRadioIndex + 1); audio.play(); });
+        // Lógica de alternancia Play/Stop
+        function togglePlay() {
+            if (audio.paused) {
+                if (!audio.src) loadRadio(currentRadioIndex);
+                audio.play();
+                playIcon.innerHTML = '<path d="M6 6h12v12H6z"/>'; // Icono Stop
+            } else {
+                audio.pause();
+                playIcon.innerHTML = '<path d="M8 5v14l11-7z"/>'; // Icono Play
+            }
+            updateTooltips();
+        }
+
+        playBtn.addEventListener('click', togglePlay);
+
+        prevBtn.addEventListener('click', () => { 
+            loadRadio(currentRadioIndex - 1); 
+            audio.play(); 
+            playIcon.innerHTML = '<path d="M6 6h12v12H6z"/>';
+        });
+
+        nextBtn.addEventListener('click', () => { 
+            loadRadio(currentRadioIndex + 1); 
+            audio.play(); 
+            playIcon.innerHTML = '<path d="M6 6h12v12H6z"/>';
+        });
+
+        // Volumen
+        volumeSlider.addEventListener('input', (e) => {
+            audio.volume = e.target.value;
+            updateVolumeIcon(audio.volume);
+            if (audio.volume > 0) lastVolume = audio.volume;
+        });
+
+        muteBtn.addEventListener('click', () => {
+            if (audio.volume > 0) { lastVolume = audio.volume; audio.volume = 0; volumeSlider.value = 0; }
+            else { audio.volume = lastVolume; volumeSlider.value = lastVolume; }
+            updateVolumeIcon(audio.volume);
+        });
+
+        function updateVolumeIcon(val) {
+            if (val == 0) volIcon.innerHTML = '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.41.32-.85.59-1.34.78v2.06c1.02-.22 1.96-.64 2.78-1.21l3.05 3.05L21 20.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>';
+            else if (val < 0.5) volIcon.innerHTML = '<path d="M18.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM5 9v6h4l5 5V4L9 9H5z"/>';
+            else volIcon.innerHTML = '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>';
+        }
 
         loadRadio(0);
 
         function hideControls() {
             if (document.fullscreenElement) {
                 document.body.classList.add('hide-cursor');
-                document.querySelectorAll('.control-btn').forEach(b => b.style.opacity = "0");
+                document.querySelectorAll('.control-btn, .volume-container').forEach(b => b.style.opacity = "0");
             }
         }
 
         function showControls() {
             document.body.classList.remove('hide-cursor');
-            document.querySelectorAll('.control-btn').forEach(b => b.style.opacity = "1");
+            document.querySelectorAll('.control-btn, .volume-container').forEach(b => b.style.opacity = "1");
             clearTimeout(cursorTimer);
             if (document.fullscreenElement) cursorTimer = setTimeout(hideControls, 3000);
         }
