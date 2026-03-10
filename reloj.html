@@ -73,14 +73,20 @@
             margin-top: 1rem; 
         }
 
-        /* Estilo para el nombre de la radio incorporado */
+        /* Estilo para el nombre de la radio posicionado abajo como footer */
         .now-playing {
-            font-size: clamp(0.7rem, 2vw, 1.1rem);
-            font-weight: 300;
+            position: absolute;
+            bottom: 38px; /* Alineado con el centro de los botones */
+            left: 50%;
+            transform: translateX(-50%);
+            /* Se aumentó el tamaño de fuente para igualar visualmente a los botones */
+            font-size: clamp(1rem, 2.5vw, 1.4rem);
+            font-weight: 400;
             opacity: 0.6;
-            margin-top: 1.5rem;
             letter-spacing: 0.5px;
             transition: opacity 0.5s ease;
+            white-space: nowrap;
+            z-index: 100;
         }
 
         .location img {
@@ -176,8 +182,9 @@
             <img src="https://cdn-icons-png.flaticon.com/512/684/684908.png" alt="Icono">
             <span id="user-location">Buscando ubicación...</span>
         </div>
-        <div class="now-playing" id="radio-name">Reproduciendo: Radio Aspen 102.3</div>
     </div>
+
+    <footer class="now-playing" id="radio-name">Reproduciendo: Radio Aspen 102.3</footer>
 
     <button class="control-btn" id="fs-button" title="Pantalla completa">
         <svg viewBox="0 0 24 24" id="icon-fs">
@@ -189,7 +196,7 @@
         const clockEl = document.getElementById('digital-clock');
         const dateEl = document.getElementById('current-date');
         const locationEl = document.getElementById('user-location');
-        const radioNameEl = document.getElementById('radio-name'); // Referencia nueva
+        const radioNameEl = document.getElementById('radio-name'); 
         const fsButton = document.getElementById('fs-button');
         const playBtn = document.getElementById('play-btn');
         const playIcon = document.getElementById('play-icon');
@@ -209,19 +216,19 @@
         let lastVolume = 1;
 
         const playlist = [
-            { name: "Radio Aspen 102.3", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/ASPEN.mp3" },
-            { name: "Radio Blue 100.7", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/BLUE_FM_100_7AAC.aac" },
-            { name: "Radio Cadena Heat 91.9", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/CADENAHEAT_SC" },
-            { name: "Radio Disney 94.3", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/DISNEY_ARG_BA_ADP.m3u8?dist=web-radiodisney" },
-            { name: "Radio La 100 99.9", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/FM999_56AAC.aac" },
-            { name: "Radio LN+ música 104.9", url: "https://stream.radio.co/s2ed3bec0a/listen" },
-            { name: "Radio Los 40 105.5", url: "https://edge01.radiohdvivo.com/los40" },
-            { name: "Radio Mega 98.3", url: "https://mega.stweb.tv/mega983/live/chunks.m3u8" },
-            { name: "Radio Metro 95.1", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/METROAAC.aac" },
-            { name: "Radio Pop 101.5", url: "https://popradio.stweb.tv/popradio/live/playlist.m3u8" },
-            { name: "Radio Rock & Pop 95.9", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/ROCKANDPOPAAC.aac" },
-            { name: "Radio Sónica 102.3", url: "https://01.solumedia.com.ar:8796/stream" },
-            { name: "Radio Urbana Play 104.3", url: "http://ipanel.instream.audio:7102/stream" }
+            { name: "Radio Aspen 102.3 (Buenos Aires)", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/ASPEN.mp3" },
+            { name: "Radio Blue 100.7 (Buenos Aires)", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/BLUE_FM_100_7AAC.aac" },
+            { name: "Radio Cadena Heat 91.9 (Córdoba)", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/CADENAHEAT_SC" },
+            { name: "Radio Disney 94.3 (Buenos Aires)", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/DISNEY_ARG_BA_ADP.m3u8?dist=web-radiodisney" },
+            { name: "Radio La 100 99.9 (Buenos Aires)", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/FM999_56AAC.aac" },
+            { name: "Radio LN+ música 104.9 (Buenos Aires)", url: "https://stream.radio.co/s2ed3bec0a/listen" },
+            { name: "Radio Los 40 105.5 (Buenos Aires)", url: "https://edge01.radiohdvivo.com/los40" },
+            { name: "Radio Mega 98.3 (Buenos Aires)", url: "https://mega.stweb.tv/mega983/live/chunks.m3u8" },
+            { name: "Radio Metro 95.1 (Buenos Aires)", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/METROAAC.aac" },
+            { name: "Radio Pop 101.5 (Buenos Aires)", url: "https://popradio.stweb.tv/popradio/live/playlist.m3u8" },
+            { name: "Radio Rock & Pop 95.9 (Buenos Aires)", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/ROCKANDPOPAAC.aac" },
+            { name: "Radio Sónica 102.3 (Paso de los Libres)", url: "https://01.solumedia.com.ar:8796/stream" },
+            { name: "Radio Urbana Play 104.3 (Buenos Aires)", url: "http://ipanel.instream.audio:7102/stream" }
         ];
 
         themeBtn.addEventListener('click', () => { document.body.classList.toggle('light-mode'); });
@@ -252,7 +259,7 @@
         function loadRadio(index) {
             currentRadioIndex = (index + playlist.length) % playlist.length;
             audio.src = playlist[currentRadioIndex].url;
-            radioNameEl.textContent = "Reproduciendo: " + playlist[currentRadioIndex].name; // Actualizar texto
+            radioNameEl.textContent = "Reproduciendo: " + playlist[currentRadioIndex].name;
             updateTooltips();
         }
 
@@ -316,14 +323,14 @@
             if (document.fullscreenElement) {
                 document.body.classList.add('hide-cursor');
                 document.querySelectorAll('.control-btn, .volume-container').forEach(b => b.style.opacity = "0");
-                radioNameEl.style.opacity = "0"; // Ocultar también el nombre en pantalla completa
+                radioNameEl.style.opacity = "0"; 
             }
         }
 
         function showControls() {
             document.body.classList.remove('hide-cursor');
             document.querySelectorAll('.control-btn, .volume-container').forEach(b => b.style.opacity = "1");
-            radioNameEl.style.opacity = "0.6"; // Restaurar opacidad suave
+            radioNameEl.style.opacity = "0.6"; 
             clearTimeout(cursorTimer);
             if (document.fullscreenElement) cursorTimer = setTimeout(hideControls, 3000);
         }
