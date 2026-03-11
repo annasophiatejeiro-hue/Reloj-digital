@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reloj digital - Playlist</title>
+    
+    <link rel="icon" href="https://cdn3d.iconscout.com/3d/premium/thumb/boton-de-play-3d-icon-png-download-12224460.png" type="image/png">
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #212529;
+            --text-light: #ced4da;
+            --btn-bg: rgba(255, 255, 255, 0.05);
+            --btn-hover: rgba(255, 255, 255, 0.15);
+        }
+
+        body.light-mode {
+            --bg-dark: #f8f9fa;
+            --text-light: #212529;
+            --btn-bg: rgba(0, 0, 0, 0.05);
+            --btn-hover: rgba(0, 0, 0, 0.1);
+        }
+
+        body.light-mode .location img { filter: none; }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            font-family: 'Roboto', sans-serif;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            overflow: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease, cursor 0.3s ease;
+        }
+
+        .hide-cursor { cursor: none !important; }
+
+        #clock-container {
+            text-align: center;
+            width: 100%;
+            padding: 20px;
+            user-select: none;
+        }
+
+        .time {
+            font-size: clamp(3rem, 18vw, 12rem);
+            font-weight: 700;
+            line-height: 1;
+            letter-spacing: -2px;
+            margin-bottom: 0.2em; 
+        }
+
+        .date {
+            font-size: clamp(1rem, 4vw, 2.5rem);
+            font-weight: 300;
+            margin-bottom: 2.5rem; 
+            letter-spacing: 1px;
+        }
+
+        .location {
+            font-size: clamp(0.8rem, 2.5vw, 1.8rem);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6em;
+            opacity: 0.9;
+            margin-top: 1rem; 
+        }
+
+        /* --- MODIFICACIÓN: Efecto Marquesina Adaptable --- */
+        .now-playing {
+            position: absolute;
+            bottom: 38px; 
+            left: 300px; /* Evita los botones de la izquierda */
+            right: 100px; /* Evita el botón de la derecha */
+            height: 1.6em;
+            overflow: hidden; /* Corta el texto sobrante */
+            display: flex;
+            justify-content: center;
+            opacity: 0; 
+            transition: opacity 0.5s ease;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        .marquee-content {
+            display: inline-block;
+            white-space: nowrap;
+            font-size: clamp(1rem, 2.2vw, 1.3rem);
+            font-weight: 400;
+            letter-spacing: 0.5px;
+            text-align: center;
+            min-width: 100%;
+            will-change: transform;
+        }
+
+        /* Clase que se activará vía JS si el texto es muy largo */
+        .animate-marquee {
+            display: inline-block;
+            padding-left: 30px;
+            animation: marquee 10s linear infinite;
+        }
+
+        @keyframes marquee {
+            0% { transform: translateX(0); }
+            10% { transform: translateX(0); }
+            90% { transform: translateX(-50%); }
+            100% { transform: translateX(-50%); }
+        }
+        /* ------------------------------------------------ */
+
+        .location img {
+            height: 1em; 
+            width: auto;
+            filter: invert(27%) sepia(51%) saturate(2878%) hue-rotate(331%) brightness(104%) contrast(89%);
+            vertical-align: middle;
+        }
+
+        .control-btn, .volume-container {
+            position: absolute;
+            bottom: 30px;
+            z-index: 101;
+            transition: all 0.3s ease, opacity 0.5s ease;
+        }
+
+        .control-btn {
+            background: var(--btn-bg);
+            border: none;
+            border-radius: 4px;
+            padding: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-btn:hover { background: var(--btn-hover); }
+        .control-btn svg { fill: var(--text-light); width: 28px; height: 28px; }
+
+        #play-btn { left: 30px; }
+        #prev-btn { left: 80px; }
+        #next-btn { left: 130px; }
+        
+        .volume-container {
+            left: 180px;
+            display: flex;
+            align-items: center;
+            background: var(--btn-bg);
+            padding: 0 8px;
+            border-radius: 4px;
+            height: 44px;
+        }
+
+        .volume-container:hover { background: var(--btn-hover); }
+
+        #volume-slider {
+            width: 0;
+            opacity: 0;
+            transition: width 0.3s ease, opacity 0.3s ease;
+            cursor: pointer;
+            margin-left: 5px;
+            accent-color: var(--text-light);
+        }
+
+        .volume-container:hover #volume-slider {
+            width: 80px;
+            opacity: 1;
+        }
+
+        #fs-button { right: 30px; }
+        #theme-btn { top: 30px; right: 30px; bottom: auto; }
+
+        #youtube-player { position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+    <div id="youtube-player"></div>
+
+    <button class="control-btn" id="theme-btn" title="Cambiar modo">
+        <svg viewBox="0 0 24 24" id="theme-icon">
+            <path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41l-1.06-1.06zm1.06-12.37c-.39-.39-1.02-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.38.39-1.02 0-1.41zM7.05 18.01c-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"/>
+        </svg>
+    </button>
+
+    <button class="control-btn" id="play-btn" title="Reproducir">
+        <svg id="play-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+    
+    <button class="control-btn" id="prev-btn"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
+    <button class="control-btn" id="next-btn"><svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6z"/></svg></button>
+
+    <div class="volume-container" id="vol-cont">
+        <button class="control-btn" id="mute-btn" style="position:relative; bottom:0; left:0; background:none; padding:0;">
+            <svg viewBox="0 0 24 24" id="vol-icon"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+        </button>
+        <input type="range" id="volume-slider" min="0" max="100" step="1" value="100">
+    </div>
+
+    <div id="clock-container">
+        <div class="date" id="current-date">Detectando fecha...</div>
+        <div class="time" id="digital-clock">00:00:00</div>
+        <div class="location">
+            <img src="https://cdn-icons-png.flaticon.com/512/684/684908.png" alt="Icono">
+            <span id="user-location">Buscando ubicación...</span>
+        </div>
+    </div>
+
+    <footer class="now-playing" id="radio-container">
+        <div class="marquee-content" id="radio-name">Reproduciendo: YouTube Playlist</div>
+    </footer>
+
+    <button class="control-btn" id="fs-button" title="Pantalla completa">
+        <svg viewBox="0 0 24 24" id="icon-fs">
+            <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+        </svg>
+    </button>
+
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script>
+        const clockEl = document.getElementById('digital-clock');
+        const dateEl = document.getElementById('current-date');
+        const locationEl = document.getElementById('user-location');
+        const radioNameEl = document.getElementById('radio-name'); 
+        const radioContainer = document.getElementById('radio-container');
+        const fsButton = document.getElementById('fs-button');
+        const playBtn = document.getElementById('play-btn');
+        const playIcon = document.getElementById('play-icon');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const themeBtn = document.getElementById('theme-btn');
+        const iconFs = document.getElementById('icon-fs');
+        
+        const volumeSlider = document.getElementById('volume-slider');
+        const muteBtn = document.getElementById('mute-btn');
+        const volIcon = document.getElementById('vol-icon');
+
+        let player;
+        let cursorTimer;
+        let userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        let lastVolume = 100;
+        let isShuffleSet = false;
+
+        const PLAYLIST_ID = 'PLmXxqSJJq-yXrCPGIT2gn8b34JjOrl4Xf'; 
+
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('youtube-player', {
+                height: '0',
+                width: '0',
+                playerVars: {
+                    'listType': 'playlist',
+                    'list': PLAYLIST_ID,
+                    'autoplay': 0,
+                    'controls': 0
+                },
+                events: {
+                    'onReady': onPlayerReady,
+                    'onStateChange': onPlayerStateChange
+                }
+            });
+        }
+
+        function onPlayerReady(event) {
+            updateTooltips();
+        }
+
+        function onPlayerStateChange(event) {
+            if (event.data === YT.PlayerState.PLAYING && !isShuffleSet) {
+                player.setShuffle(true);
+                isShuffleSet = true;
+            }
+
+            if (event.data === YT.PlayerState.PLAYING) {
+                const videoData = player.getVideoData();
+                const title = "Reproduciendo: " + (videoData.title || "YouTube Video");
+                
+                // Actualizar texto y resetear animación
+                radioNameEl.textContent = title;
+                radioNameEl.classList.remove('animate-marquee');
+                
+                radioContainer.style.opacity = "0.6";
+                playIcon.innerHTML = '<path d="M6 6h12v12H6z"/>';
+
+                // Comprobar si el texto desborda el contenedor para aplicar animación
+                setTimeout(() => {
+                    if (radioNameEl.scrollWidth > radioContainer.offsetWidth) {
+                        radioNameEl.innerHTML = `<span>${title}</span> &nbsp;&nbsp;&nbsp;&nbsp; <span>${title}</span>`;
+                        radioNameEl.classList.add('animate-marquee');
+                    }
+                }, 100);
+
+            } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
+                playIcon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+                if (event.data === YT.PlayerState.PAUSED) radioContainer.style.opacity = "0";
+            }
+        }
+
+        themeBtn.addEventListener('click', () => { document.body.classList.toggle('light-mode'); });
+
+        async function autoDetectLocation() {
+            try {
+                const response = await fetch('https://ipapi.co/json/');
+                const data = await response.json();
+                if (data.city) {
+                    locationEl.textContent = `${data.city}, ${data.region}, ${data.country_name}`;
+                    userTimeZone = data.timezone;
+                }
+            } catch (error) { locationEl.textContent = "Ubicación basada en sistema"; }
+        }
+        autoDetectLocation();
+
+        function updateClock() {
+            const now = new Date();
+            const timeOptions = { timeZone: userTimeZone, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+            const dateOptions = { timeZone: userTimeZone, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+            clockEl.textContent = new Intl.DateTimeFormat('es-AR', timeOptions).format(now);
+            let dateString = new Intl.DateTimeFormat('es-AR', dateOptions).format(now);
+            dateEl.textContent = dateString.charAt(0).toUpperCase() + dateString.slice(1);
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        function updateTooltips() {
+            prevBtn.title = "Anterior video (Shuffle activado)";
+            nextBtn.title = "Siguiente video (Shuffle activado)";
+            playBtn.title = "Reproducir / Pausar";
+        }
+
+        function togglePlay() {
+            const state = player.getPlayerState();
+            if (state === YT.PlayerState.PLAYING) {
+                player.pauseVideo();
+            } else {
+                player.playVideo();
+            }
+        }
+
+        playBtn.addEventListener('click', togglePlay);
+        prevBtn.addEventListener('click', () => { player.previousVideo(); });
+        nextBtn.addEventListener('click', () => { player.nextVideo(); });
+
+        volumeSlider.addEventListener('input', (e) => {
+            const vol = e.target.value;
+            player.setVolume(vol);
+            updateVolumeIcon(vol);
+            if (vol > 0) lastVolume = vol;
+        });
+
+        muteBtn.addEventListener('click', () => {
+            if (player.getVolume() > 0) { 
+                lastVolume = player.getVolume(); 
+                player.setVolume(0); 
+                volumeSlider.value = 0; 
+            } else { 
+                player.setVolume(lastVolume); 
+                volumeSlider.value = lastVolume; 
+            }
+            updateVolumeIcon(player.getVolume());
+        });
+
+        function updateVolumeIcon(val) {
+            if (val == 0) volIcon.innerHTML = '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.41.32-.85.59-1.34.78v2.06c1.02-.22 1.96-.64 2.78-1.21l3.05 3.05L21 20.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>';
+            else if (val < 50) volIcon.innerHTML = '<path d="M18.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM5 9v6h4l5 5V4L9 9H5z"/>';
+            else volIcon.innerHTML = '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>';
+        }
+
+        function hideControls() {
+            if (document.fullscreenElement) {
+                document.body.classList.add('hide-cursor');
+                document.querySelectorAll('.control-btn, .volume-container').forEach(b => b.style.opacity = "0");
+                radioContainer.style.opacity = "0"; 
+            }
+        }
+
+        function showControls() {
+            document.body.classList.remove('hide-cursor');
+            document.querySelectorAll('.control-btn, .volume-container').forEach(b => b.style.opacity = "1");
+            if (player && player.getPlayerState() === YT.PlayerState.PLAYING) radioContainer.style.opacity = "0.6";
+            clearTimeout(cursorTimer);
+            if (document.fullscreenElement) cursorTimer = setTimeout(hideControls, 3000);
+        }
+        document.addEventListener('mousemove', showControls);
+
+        fsButton.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+                iconFs.innerHTML = '<path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>';
+                cursorTimer = setTimeout(hideControls, 3000);
+            } else {
+                document.exitFullscreen();
+                iconFs.innerHTML = '<path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>';
+            }
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
