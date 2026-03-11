@@ -1,2 +1,2 @@
-# Versatilidad en el diseño del reloj: opciones con radio y listas de reproducción
+# Diseño del reloj con 2 versiones
 Este repositorio contiene dos archivos HTML que comparten la misma funcionalidad base: mostrar la hora, la fecha y la ubicación en tiempo real. La diferencia principal entre ambos radica en el contenido multimedia integrado; mientras que una de las versiones permite sintonizar diversas emisoras de radio de Argentina, la otra está diseñada para reproducir una lista de reproducción de YouTube.
