@@ -73,33 +73,46 @@
             margin-top: 1rem; 
         }
 
-        /* Estilo para el nombre de la radio posicionado abajo como footer */
-        .now-playing {
+        /* --- CONTENEDOR DE RADIO ADAPTATIVO --- */
+        .now-playing-container {
             position: absolute;
-            bottom: 38px; /* Alineado con el centro de los botones */
-            left: 50%;
-            transform: translateX(-50%);
-            /* Se aumentó el tamaño de fuente para igualar visualmente a los botones */
-            font-size: clamp(1rem, 2.5vw, 1.5rem);
+            bottom: 38px;
+            left: 310px; 
+            right: 90px;  
+            overflow: hidden;
+            z-index: 100;
+            pointer-events: none;
+            display: flex;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .now-playing {
+            font-size: clamp(0.9rem, 2vw, 1.3rem);
             font-weight: 400;
-            opacity: 0; /* INICIA INVISIBLE */
+            opacity: 0;
             letter-spacing: 0.5px;
             transition: opacity 0.5s ease;
             white-space: nowrap;
-            z-index: 100;
+            display: inline-block;
         }
 
-        .location img {
-            height: 1em; 
-            width: auto;
-            filter: invert(27%) sepia(51%) saturate(2878%) hue-rotate(331%) brightness(104%) contrast(89%);
-            vertical-align: middle;
+        @keyframes marquee {
+            0% { transform: translateX(0); }
+            10% { transform: translateX(0); }
+            90% { transform: translateX(var(--scroll-dist, -100%)); } 
+            100% { transform: translateX(0); }
         }
 
+        .animate-text {
+            animation: marquee 10s linear infinite;
+        }
+
+        /* --- BOTONES Y CONTROLES --- */
         .control-btn, .volume-container {
             position: absolute;
             bottom: 30px;
-            z-index: 100;
+            z-index: 110;
             transition: all 0.3s ease, opacity 0.5s ease;
         }
 
@@ -131,8 +144,6 @@
             height: 44px;
         }
 
-        .volume-container:hover { background: var(--btn-hover); }
-
         #volume-slider {
             width: 0;
             opacity: 0;
@@ -149,6 +160,46 @@
 
         #fs-button { right: 30px; }
         #theme-btn { top: 30px; right: 30px; bottom: auto; }
+
+        .location img {
+            height: 1em; 
+            width: auto;
+            filter: invert(27%) sepia(51%) saturate(2878%) hue-rotate(331%) brightness(104%) contrast(89%);
+            vertical-align: middle;
+        }
+
+        /* --- AJUSTE PARA CELULAR Y TABLET --- */
+        @media (max-width: 992px) {
+            #play-btn { left: 15px; }
+            #prev-btn { left: 60px; }
+            #next-btn { left: 105px; }
+            .volume-container { left: 150px; }
+            
+            .now-playing-container {
+                left: 280px; 
+                right: 90px;  
+            }
+        }
+
+        @media (max-width: 768px) {
+            #play-btn { left: 10px; }
+            #prev-btn { left: 55px; }
+            #next-btn { left: 100px; }
+            .volume-container { left: 145px; }
+            
+            .now-playing-container {
+                left: 275px; 
+                right: 80px;  /* Incrementado para no chocar con el botón FS */
+            }
+            .now-playing { font-size: 0.9rem; }
+        }
+
+        @media (max-width: 580px) {
+            .now-playing-container {
+                left: 275px; 
+                right: 80px; /* Incrementado para seguridad */
+            }
+        }
     </style>
 </head>
 <body>
@@ -184,7 +235,9 @@
         </div>
     </div>
 
-    <footer class="now-playing" id="radio-name">Reproduciendo: Radio Aspen 102.3</footer>
+    <div class="now-playing-container">
+        <footer class="now-playing" id="radio-name">Reproduciendo: Radio Aspen 102.3</footer>
+    </div>
 
     <button class="control-btn" id="fs-button" title="Pantalla completa">
         <svg viewBox="0 0 24 24" id="icon-fs">
@@ -256,11 +309,30 @@
         setInterval(updateClock, 1000);
         updateClock();
 
+        function checkMarquee() {
+            const container = document.querySelector('.now-playing-container');
+            radioNameEl.classList.remove('animate-text');
+            radioNameEl.style.transform = "translateX(0)";
+            
+            setTimeout(() => {
+                const isOverflowing = radioNameEl.offsetWidth > container.offsetWidth;
+                if (isOverflowing) {
+                    radioNameEl.classList.add('animate-text');
+                    container.style.justifyContent = "flex-start";
+                    const scrollDistance = radioNameEl.offsetWidth - container.offsetWidth;
+                    radioNameEl.style.setProperty('--scroll-dist', `-${scrollDistance}px`);
+                } else {
+                    container.style.justifyContent = "center";
+                }
+            }, 100);
+        }
+
         function loadRadio(index) {
             currentRadioIndex = (index + playlist.length) % playlist.length;
             audio.src = playlist[currentRadioIndex].url;
             radioNameEl.textContent = "Reproduciendo: " + playlist[currentRadioIndex].name;
             updateTooltips();
+            checkMarquee();
         }
 
         function updateTooltips() {
@@ -278,11 +350,11 @@
                 if (!audio.src) loadRadio(currentRadioIndex);
                 audio.play();
                 playIcon.innerHTML = '<path d="M6 6h12v12H6z"/>';
-                radioNameEl.style.opacity = "0.6"; // SE HACE VISIBLE AL DAR PLAY
+                radioNameEl.style.opacity = "0.6";
             } else {
                 audio.pause();
                 playIcon.innerHTML = '<path d="M8 5v14l11-7z"/>';
-                radioNameEl.style.opacity = "0"; // SE OCULTA AL PAUSAR
+                radioNameEl.style.opacity = "0";
             }
             updateTooltips();
         }
@@ -321,8 +393,6 @@
             else volIcon.innerHTML = '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>';
         }
 
-        // Se quitó loadRadio(0) de aquí para que no aparezca el nombre al cargar
-
         function hideControls() {
             if (document.fullscreenElement) {
                 document.body.classList.add('hide-cursor');
@@ -334,11 +404,12 @@
         function showControls() {
             document.body.classList.remove('hide-cursor');
             document.querySelectorAll('.control-btn, .volume-container').forEach(b => b.style.opacity = "1");
-            if (!audio.paused) radioNameEl.style.opacity = "0.6"; // Solo mostrar si no está pausado
+            if (!audio.paused) radioNameEl.style.opacity = "0.6";
             clearTimeout(cursorTimer);
             if (document.fullscreenElement) cursorTimer = setTimeout(hideControls, 3000);
         }
         document.addEventListener('mousemove', showControls);
+        document.addEventListener('touchstart', showControls);
 
         fsButton.addEventListener('click', () => {
             if (!document.fullscreenElement) {
@@ -350,7 +421,9 @@
                 iconFs.innerHTML = '<path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>';
             }
         });
+
+        window.addEventListener('resize', checkMarquee);
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
